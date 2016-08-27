@@ -8,37 +8,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
-import ru.sergal.testtask.service.dto.BirthdayResult;
 import ru.sergal.testtask.service.dto.DaysToBirthday;
 
 import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-public class BirthdayWorker implements Runnable {
+public class BirthdayWorker implements Callable<List<DaysToBirthday>> {
 
     private static final Logger log = LoggerFactory.getLogger(BirthdayWorker.class);
 
     private int month;
     private String filename;
-    private String uuid;
-    private Map<String, BirthdayResult> currentTasks;
 
-    public BirthdayWorker(String filename, int month,
-                          String uuid,
-                          Map<String, BirthdayResult> currentTasks) {
+    public BirthdayWorker(String filename, int month) {
         this.filename = filename;
         this.month = month;
-        this.uuid = uuid;
-        this.currentTasks = currentTasks;
     }
 
     @Override
-    public void run() {
+    public List<DaysToBirthday> call() {
         try {
-            log.info("Task {} is starting", uuid);
+            log.info("Task for month {} is starting", month);
             Thread.sleep(60000L);
             List<Pair<Date, String>> birthdays = readFile();
             List<DaysToBirthday> daysToBirthdays = birthdays.stream()
@@ -46,13 +40,11 @@ public class BirthdayWorker implements Runnable {
                     .map(pair -> new DaysToBirthday(pair.getRight(),
                             DateUtils.daysToBirthdayCount(new Date(), pair.getLeft())))
                     .collect(Collectors.toList());
-            BirthdayResult result = new BirthdayResult(BirthdayResult.BirthdayResultStatus.DONE);
-            result.getBirthdayList().addAll(daysToBirthdays);
-            currentTasks.put(uuid, result);
-            log.info("Task {} successfully ended", uuid);
+            log.info("Task successfully ended");
+            return daysToBirthdays;
         } catch (InterruptedException | IOException e){
-            currentTasks.put(uuid, new BirthdayResult(BirthdayResult.BirthdayResultStatus.ERROR));
-            log.error("Task {} ended with error", e);
+            log.error("Taskgi ended with error", e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -76,7 +68,12 @@ public class BirthdayWorker implements Runnable {
                 e.printStackTrace();
             }
         }
+        reader.close();
 
         return result;
+    }
+
+    public static BirthdayWorker getInstance(String filename, int month) {
+        return new BirthdayWorker(filename, month);
     }
 }

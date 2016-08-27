@@ -17,10 +17,15 @@ public class BirthdayResult {
 
     private BirthdayResultStatus status;
 
-    private final List<DaysToBirthday> birthdayList = new ArrayList<>();
+    private List<DaysToBirthday> birthdayList;
 
     public BirthdayResult(BirthdayResultStatus status) {
         this.status = status;
+    }
+
+    public BirthdayResult(BirthdayResultStatus status, List<DaysToBirthday> birthdayList) {
+        this.status = status;
+        this.birthdayList = birthdayList;
     }
 
     public BirthdayResultStatus getStatus() {
